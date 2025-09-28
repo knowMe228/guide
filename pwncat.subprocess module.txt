@@ -1,0 +1,316 @@
+The manager is the core object within pwncat. A manager is responsible for maintaining configuration, terminal state, and maintaining all active pwncat sessions. A manager can have zero or more sessions active at any given time. It is recommended to create a manager through the context manager syntax. In this way, pwncat will automatically disconnect from active sessions and perform any required cleanup prior to exiting even if there was an uncaught exception. The normal method of creating a manager is:
+
+with pwncat.manager.Manager() as manager:
+    # Do something with your manager, like set a configuration item
+    # or open a connection
+    session = manager.create_session(platform="linux", host="192.168.1.1", port=4444)
+
+Listeners
+
+The pwncat manager provides the ability to create background listeners. Background listeners are classes which inherit from threading.Thread. To create a new listener, you can use the pwncat.manager.Manager.create_listener() method. To get an asynchronous notification of new sessions, you can use the established callback which receives the new session as an argument.
+
+exception pwncat.manager.InteractiveExit
+
+    Bases: Exception
+
+    Indicates we should exit the interactive terminal
+
+class pwncat.manager.Listener(manager: pwncat.manager.Manager, address: Tuple[str, int], protocol: str = 'socket', platform: Optional[str] = None, count: Optional[int] = None, established: Optional[Callable[[pwncat.manager.Session], bool]] = None, ssl: bool = False, ssl_cert: Optional[str] = None, ssl_key: Optional[str] = None)
+
+    Bases: threading.Thread
+
+    Background Listener which acts as a factory constructing sessions in the background. Listeners should not be created directly. Rather, you should use the pwncat.manager.Manager.create_listener() method.
+    Using a background listener
+
+    def new_session(session: pwncat.manager.Session):
+        # Returning false causes the session to be removed immediately
+        return True
+
+    with Manager() as manager:
+        listener = manager.create_listener(
+            port=4444,
+            platform="linux",
+            ssl=True,
+            established=new_session,
+        )
+        # You can also stop the listener
+        # listener.stop()
+        manager.interactive()
+
+    address: Tuple[str, int]
+
+        The address to bind our listener to on the attacking machine
+
+    bootstrap_session(channel: pwncat.channel.Channel, platform: str, _queue_message: bool = False) → pwncat.manager.Session
+
+        Establish a session from an existing channel using the specified platform. If platform is None, then the given channel is placed onto the uninitialized channel queue for later initialization.
+
+        Parameters
+
+                channel (pwncat.channel.Channel) – the channel to initialize
+
+                platform (Optional[str]) – name of the platform to initialize
+
+                _queue_message (bool) – only used internally to show unitialized channel message (default: False)
+
+        Return type
+
+            pwncat.manager.Session
+        Raises
+
+            ListenerError: incorrect platform or channel disconnected
+
+    count: Optional[int]
+
+        The number of connections to receive before exiting
+
+    established: Optional[Callable[[pwncat.manager.Session], bool]]
+
+        A callback used when a new session is established
+
+    failure_exception: Optional[Exception]
+
+        An exception which was caught and put the listener in ListenerState.FAILED state
+
+    iter_channels(count: Optional[int] = None) → Generator[pwncat.channel.Channel, None, None]
+
+        Synchronously iterate over new channels. This generated will yield channels until no more channels are found on the queue. However, more channels may be added after iterator (or while iterating) over this generator. Reaching the end of this list when count=None does not indicate that the listener has stopped.
+
+        Parameters
+
+            count (Optional[int]) – number of channels to receive or None for infinite
+        Return type
+
+            Generator[Channel, None, None]
+
+    iter_sessions(count: Optional[int] = None) → Generator[pwncat.manager.Session, None, None]
+
+        Synchronously iterate over new sessions. This generated will yield sessions until no more sessions are found on the queue. However, more sessions may be added after iterator (or while iterating) over this generator. Reaching the end of this list when count=None does not indicate that the listener has stopped.
+
+        Parameters
+
+            count (Optional[int]) – the number of sessions to retreive or None for infinite
+        Return type
+
+            Generator[Session, None, None]
+
+    manager: pwncat.manager.Manager
+
+        The controlling manager object
+
+    property pending: int
+
+        Retrieve the number of pending channels
+
+    platform: Optional[str]
+
+        The platform to use when automatically establishing sessions
+
+    protocol: str
+
+        Name of the channel protocol to use for incoming connections
+
+    run()
+
+        Execute the listener in the background. We have to be careful not to trip up the manager, as this is running in a background thread.
+
+    ssl: bool
+
+        Whether to wrap the listener in SSL
+
+    ssl_cert: Optional[str]
+
+        The SSL server certificate
+
+    ssl_key: Optional[str]
+
+        The SSL server key
+
+    state: pwncat.manager.ListenerState
+
+        The current state of the listener; only set internally
+
+    stop()
+
+        Stop the listener
+
+exception pwncat.manager.ListenerError
+
+    Bases: Exception
+
+    Raised by utility functions within the listener class. This is never raised in the main thread, and is only used to consolidate errors from various socket and ssl libraries when setting up and operating the listener.
+
+enum pwncat.manager.ListenerState(value)
+
+    Bases: enum.Enum
+
+    Background listener state
+
+    Valid values are as follows:
+
+    STOPPED = <ListenerState.STOPPED: 1>
+
+    RUNNING = <ListenerState.RUNNING: 2>
+
+    FAILED = <ListenerState.FAILED: 3>
+
+class pwncat.manager.Manager(config: Optional[str] = None)
+
+    Bases: object
+
+    pwncat manager which is responsible for creating channels, and sessions, managing the database sessions. It provides the factory functions for generating platforms, channels, database sessions, and executing modules.
+
+    create_db_session()
+
+        Create a new SQLAlchemy database session and return it
+
+    create_listener(protocol: str, host: str, port: int, platform: Optional[str] = None, ssl: bool = False, ssl_cert: Optional[str] = None, ssl_key: Optional[str] = None, count: Optional[int] = None, established: Optional[Callable[[pwncat.manager.Session], bool]] = None) → pwncat.manager.Listener
+
+        Create and start a new background listener which will wait for connections from victims and optionally automatically establish sessions. If no platform name is provided, new Channel objects will be created and can be initialized by iterating over them with listener.iter_channels and initialized with listener.bootstrap_session. If ssl is true, the socket will be wrapped in an SSL context. The protocol is normally socket, but can be any channel protocol which supports a client parameter holding a socket object.
+
+        Parameters
+
+                protocol (str) – the name of the channel protocol to use (default: socket)
+
+                host (str) – the host address on which to bind
+
+                port (int) – the port on which to listen
+
+                platform (Optional[str]) – the platform to use when automatically establishing sessions or None
+
+                ssl (bool) – whether to wrap the listener in an SSL context (default: false)
+
+                ssl_cert (Optional[str]) – the SSL PEM certificate path
+
+                ssl_key (Optional[str]) – the SSL PEM key path
+
+                count (Optional[int]) – the number of sessions to establish before automatically stopping the listener
+
+                established (Optional[Callback[[Session], bool]]) – a callback for when new sessions are established; returning false will immediately disconnect the new session.
+
+    create_session(platform: str, channel: Optional[pwncat.channel.Channel] = None, **kwargs)
+
+        Create a new session from a new or existing channel. The platform specified should be the name registered name (e.g. linux) of a platform class. If no existing channel is provided, the keyword arguments are used to construct a new channel.
+
+        Parameters
+
+                platform (str) – name of the platform to use
+
+                channel (Optional[Channel]) – A pre-constructed channel (default: None)
+
+                **kwargs – keyword arguments for constructing a new channel
+
+        Return type
+
+            Session
+        Raises
+
+            ChannelError: there was an error while constructing the new channel PlatformError: construction of a platform around the channel failed
+
+    find_session_by_channel(channel: pwncat.channel.Channel)
+
+        Locate a session by it’s channel object. This is mainly used when a ChannelError is raised in order to locate the misbehaving session object from the exception data.
+
+        Parameters
+
+            channel (Channel) – the channel you are looking for
+        Return type
+
+            Session
+
+    interactive()
+
+        Start interactive prompt
+
+    load_modules(*paths)
+
+        Dynamically load modules from the specified paths
+
+        If a module has the same name as an already loaded module, it will take it’s place in the module list. This includes built-in modules.
+
+    log(*args, **kwargs)
+
+        Output a log entry
+
+    open_database()
+
+        Create the internal engine and session builder for this manager based on the configured database
+
+    print(*args, **kwargs)
+
+    property target: pwncat.manager.Session
+
+        Retrieve the currently focused target
+
+class pwncat.manager.Session(manager, platform: Union[str, pwncat.platform.Platform], channel: Optional[pwncat.channel.Channel] = None, active: bool = True, **kwargs)
+
+    Bases: object
+
+    This class represents the container by which pwncat references connections to victim machines. It glues together a connected Channel and an appropriate Platform implementation. It also provides generic access to the pwncat database and logging functionality.
+
+    close()
+
+        Close the session and remove from manager tracking
+
+    property config
+
+        Get the configuration object for this manager. This is simply a wrapper for session.manager.config to make accessing configuration a little easier.
+
+    current_user() → pwncat.facts.User
+
+        Retrieve the current user object
+
+    died()
+
+    find_group(gid=None, name=None)
+
+        Locate a user object by name or ID
+
+    find_module(pattern: str, base=None, exact: bool = False)
+
+        Locate a module by a glob pattern. This is an generator which may yield multiple modules that match the pattern and base class.
+
+    find_user(uid=None, name=None)
+
+        Locate a user object by name or ID
+
+    iter_groups(members: Optional[List[Union[str, int]]] = None)
+
+        Iterate over groups for the target
+
+    iter_users()
+
+        Iterate over the users for the target
+
+    log(*args, **kwargs)
+
+        Log to the console. This utilizes the active sessions progress instance to log without messing up progress output from other sessions, if we aren’t active.
+
+    print(*args, **kwargs)
+
+        Log to the console. This utilizes the active sessions progress instance to log without messing up progress output from other sessions, if we aren’t active.
+
+    register_fact(fact: pwncat.db.Fact, scope: pwncat.modules.enumerate.Scope = Scope.HOST, commit: bool = False)
+
+        Register a fact with this session’s target. This is useful when a fact is generated during execution of a command or module, but is not associated with a specific enumeration module. It can still be queried with the base enumerate module by it’s type.
+
+    register_new_host()
+
+        Register a new host in the database. This assumes the hash has already been stored in self.hash
+
+    run(module: str, **kwargs)
+
+        Run a module on this session
+
+    property target: pwncat.target.Target
+
+        Retrieve the target object for this session
+
+    task(*args, **kwargs)
+
+        Get a new task in this session’s progress instance
+
+    update_task(task, *args, **kwargs)
+
+        Update an active task
+

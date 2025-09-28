@@ -1,0 +1,396 @@
+The Linux platform provides Linux shell support ontop of any channel. The Linux platform expects the channel to expose a shell whose stdio is connected directly to the channel IO. At a minimum stdin and stdout must be connected.
+
+Because of the way this platform interacts with the shell directly, it is not able to manage multiple active processes. Only as single Popen can be running at a time. It is imperative that you call Popen.wait or wait for Popen.poll to return non-Null prior to calling any other pwncat methods.
+
+class pwncat.platform.linux.Linux(session, channel: pwncat.channel.Channel, *args, **kwargs)
+
+    Bases: pwncat.platform.Platform
+
+    Concrete platform class abstracting interaction with a GNU/Linux remote host. See the base class (pwncat.platform.Platform) for more information on the implemented methods and interface definition.
+
+    PATH_TYPE
+
+        alias of pwncat.platform.linux.LinuxPath
+
+    PROMPTS = {'dash': '\'$(command printf "(remote) $(whoami)@$(hostname):$PWD\\$ ")\'', 'default': '\'$(command printf "\\[\\033[01;31m\\](remote)\\[\\033[0m\\] \\[\\033[01;33m\\]$(whoami)@$(hostname)\\[\\033[0m\\]:\\[\\033[1;36m\\]$PWD\\[\\033[0m\\]\\$ ")\'', 'sh': '\'$(command printf "(remote) $(whoami)@$(hostname):$PWD\\$ ")\'', 'zsh': "'%B%F{red}(remote) %B%F{yellow}%n@%M%B%F{reset}:%B%F{cyan}$PWD%B%(#.%b%F{white}#.%b%F{white}$)%b%F{reset} '"}
+
+    Popen(args, bufsize=- 1, stdin=None, stdout=None, stderr=None, shell=False, cwd=None, encoding=None, text=None, errors=None, env=None, bootstrap_input=None, send_command=None, **other_popen_kwargs) → pwncat.subprocess.Popen
+
+        Execute a process on the remote host with an interface similar to that of the python standard subprocess.Popen. The returned object behaves much like a standard Popen object and conforms to the interface defined by pwncat.subprocess.Popen. For an explanation of arguments, see pwncat.subprocess.Popen.
+
+    abspath(path: str) → str
+
+        Attempt to resolve a path to an absolute path
+
+    chdir(path: Union[str, pwncat.platform.Path])
+
+        Change directories to the given path. This method returns the current working directory prior to the change.
+
+        Parameters
+
+            path (Union[str, pwncat.platform.Path]) – a relative or absolute path to change to
+        Returns
+
+            current working directory prior to the change
+        Raises
+
+            FileNotFoundError: the specified path doesn’t exist NotADirectoryError: the specified path is not a directory
+
+    chmod(path: str, mode: int, link: bool = False)
+
+        Update the file permissions
+
+    chown(path: str, uid: int, gid: int)
+
+        Change ownership of a file
+
+    compile(sources: List[Union[str, BinaryIO]], output: Optional[str] = None, suffix: Optional[str] = None, cflags: Optional[List[str]] = None, ldflags: Optional[List[str]] = None) → str
+
+        Attempt to compile the given C source files into a binary suitable for the remote host. If a compiler exists on the remote host, prefer compilation locally. If no compiler exists on the remote remote host, check the cross global config variable for the path to a local compiler capable of generating binaries for the remote host. If the binary is compiled locally, it is automatically uploaded to the remote host. The path to the new binary on the victim is returned.
+
+        Parameters
+
+                sources (List[Union[str, io.IOBase]]) – list of source file paths or IO streams used as source files
+
+                output (str) – base name of the output file. If not specified, a name is randomly generated.
+
+                suffix (str) – a suffix to add to the output name.
+
+                cflags (List[str]) – a list of flags to pass to the compiler
+
+                ldflags (List[str]) – a list of flags to pass to the linker
+
+        Returns
+
+            str
+        Raises
+
+                NotImplementedError – this platform does not support c compilation
+
+                PlatformError – no local or cross compiler detected or compilation failed
+
+    disable_history()
+
+        Disable shell history
+
+    exit()
+
+        Exit this session
+
+    get_host_hash() → str
+
+        Retrieve a string which uniquely identifies this victim host. On Unix-like platforms, this retrieves the hostname and MAC addresses of any available network interfaces and computes a hash, which should be unique regardless of connection method.
+
+        Returns
+
+            a unique string (normally a hash) identifying this host
+        Return type
+
+            str
+
+    get_pty()
+
+        Spawn a PTY in the current shell. If a PTY is already running then this method does nothing.
+
+    getenv(name: str)
+
+        Get the value of an environment variable.
+
+        Parameters
+
+            name (str) – the name of the environment variable
+        Return type
+
+            str
+
+    getuid()
+
+        Retrieve the current cached uid
+
+    property interactive: bool
+
+        Indicates whether the remote victim shell is currently in a state suitable for user-interactivity. Setting this property to True will ensure that a suitable shell prompt is set, echoing is one, etc.
+
+    link_to(source: str, target: str)
+
+        Create a filesystem hard link.
+
+    listdir(path=None) → Generator[str, None, None]
+
+        List the contents of a directory. If path is None, then the contents of the current directory is listed. The list is not guaranteed to be sorted in any way.
+
+        Parameters
+
+            path (str or Path-like) – the directory to list
+        Raises
+
+            FileNotFoundError – When the requested directory is not a directory, does not exist, or you do not have execute permissions.
+
+    lstat(path: str) → os.stat_result
+
+        Perform the equivalent of the lstat syscall
+
+    mkdir(path: str, mode: int = 511, parents: bool = False)
+
+        Create a new directory
+
+    name = 'linux'
+
+        Name of this platform (e.g. “linux”)
+
+    open(path: Union[str, pwncat.platform.Path], mode: str = 'r', buffering: int = - 1, encoding: str = 'utf-8', errors: Optional[str] = None, newline: Optional[str] = None)
+
+        Open a remote file for reading or writing. Normally, only one of read or write modes are allowed for a remote file, but this may change with future platforms. It is recommended to only use one mode when opening remote files. This method attempts to replicate the built-in open function and returns a file-like object. The b mode is honored and if not present, a TextIOWrapper is used to wrap the file object to ensure text data is returned.
+
+        Parameters
+
+                path (Union[str, pwncat.platform.Path]) – path to the file
+
+                mode (str) – the open-mode (see built-in open)
+
+        Returns
+
+            a file-like object
+
+    readlink(path: str)
+
+        Attempt to read the target of a link
+
+    refresh_uid()
+
+        Retrieve the current user ID
+
+    rename(source: str, target: str)
+
+        Rename a file from the source to the target. This should replace the target if it exists.
+
+    rmdir(target: str)
+
+        Remove the specified directory. It must be empty.
+
+    setenv(name: str, value: str, export: bool = False)
+
+        Set an environment variable in the shell.
+
+        Parameters
+
+                name (a string representing a valid shell variable name) – the name of the environment variable
+
+                value (str) – the value of the variable
+
+                export (bool) – whether to export the new value
+
+    stat(path: str) → os.stat_result
+
+        Perform the equivalent of the stat syscall on the remote host
+
+    su(user: str, password: Optional[str] = None)
+
+        Attempt to switch users in the running shell. This normally executes a new sub-shell as the requested user. On unix-like systems, this is simply a wrapper for the su command. Implementations may differ on other systems. If a password isn’t provided, the database will be consulted for a matching username and password.
+
+        Parameters
+
+                user (str) – the name of the new user
+
+                password (str) – the password for the new user
+
+        Raises
+
+            PermissionError: the provided password was incorrect
+
+    sudo(command: Union[str, List[str]], user: Optional[str] = None, group: Optional[str] = None, password: Optional[str] = None, as_is: bool = False, **popen_kwargs)
+
+        Run the specified command as the specified user and group. On unix-like systems the normally translates to the sudo command. The command is executed using the self.popen method. All arguments not documented here are passed directly to self.popen. The process is executed and if a password is required, it is sent from the database. If a password is not available, the process is killed and a PermissionError is raised. If the password is incorrect, a PermissionError is also raised.
+
+        Parameters
+
+                command (str) – either an argument array or command line string
+
+                user (str) – the name of a user to execute as or None
+
+                group (str) – the group to execute as or None
+
+                password (str) – the password for the current user
+
+                as_is (bool) – indicates to not add sudo to the command line
+
+                **popen_kwargs – arguments passed to the Popen method
+
+    symlink_to(source: str, target: str)
+
+        Create a symbolic link to source from target
+
+    tempfile(length: Optional[int] = None, suffix: Optional[str] = None, directory: Optional[str] = None, **kwargs)
+
+        Create a temporary file on the remote host and open it with the specified mode. Creating a new temporary file with a mode other than “w” is mostly useless, however mode can be used to specify a binary or text-mode file. The length argument is useful if you know the length of file you are about to read. This alleviates some situations which could be complicated on some platforms by not knowing the intended file length prior to opening. Optionally, a suffix can be added to the random file name. A file-like object is returned. The temporary file is not removed by pwncat itself. Unless explicitly removed, it will continue to exist until the remote operating system cleans up temporary files (possible at the next reboot).
+
+        Parameters
+
+                mode (str) – the open-mode for the new file-like object
+
+                length (int) – the intended length for the new file random name component
+
+                suffix (str) – a suffix for the filename
+
+                directory (str or Path-like) – a directory where the temporary file will be placed
+
+        Returns
+
+            a file-like object
+
+    touch(path: str)
+
+        Update a file modification time and possibly create it
+
+    umask(mask: Optional[int] = None)
+
+        Set or retrieve the current umask value
+
+    unlink(target: str)
+
+        Remove a link to a file (similar to rm)
+
+    whoami()
+
+        Get the name of the current user
+
+class pwncat.platform.linux.LinuxPath(*args)
+
+    Bases: pathlib.PurePosixPath
+
+    Special cases for Linux remote paths
+
+    readable()
+
+        Test if a file is readable
+
+    writable()
+
+class pwncat.platform.linux.LinuxReader(popen, on_close=None, name: Optional[str] = None)
+
+    Bases: io.BufferedIOBase
+
+    A file-like object which wraps a Popen object to enable reading a remote file.
+
+    close()
+
+        Close the file and stop the process
+
+    detach()
+
+        Detach the underlying process and return the Popen object
+
+    read(size: int = - 1)
+
+        Read data from the file
+
+    read1(size: int = - 1)
+
+        Read data w/ 1 call to underlying buffer
+
+    readable()
+
+        Return whether object was opened for reading.
+
+        If False, read() will raise OSError.
+
+    readinto(b)
+
+        Read data w/ 1 call to underlying buffer
+
+    readinto1(b)
+
+        Read data w/ 1 call to underlying buffer
+
+    writable()
+
+        Return whether object was opened for writing.
+
+        If False, write() will raise OSError.
+
+class pwncat.platform.linux.LinuxWriter(popen, on_close=None, name: Optional[str] = None)
+
+    Bases: io.BufferedIOBase
+
+    A wrapper around an active Popen object which is writing to a file. Remote files are not seekable, and cannot be simultaneous read/write.
+
+    CONTROL_CODES = [0, 1, 2, 3, 4, 5, 6, 7, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 127]
+
+    close()
+
+        Close the file and stop the process
+
+    detach()
+
+        Detach the underlying process and return the Popen object
+
+    readable()
+
+        Return whether object was opened for reading.
+
+        If False, read() will raise OSError.
+
+    writable()
+
+        Return whether object was opened for writing.
+
+        If False, write() will raise OSError.
+
+    write(b)
+
+        Write data to the underlying Popen stdin. This translates any control-sequences into escaped control sequences, because it assumes you are trying to write to a file and not control the terminal.
+
+class pwncat.platform.linux.PopenLinux(platform: pwncat.platform.Platform, args, stdout, stdin, text, encoding, errors, bufsize, start_delim: bytes, end_delim: bytes, code_delim: bytes)
+
+    Bases: pwncat.subprocess.Popen
+
+    Linux-specific Popen wrapper class.
+
+    args: List[str]
+
+        The args argument as it was passed to Popen – a sequence of program arguments or else a single string.
+
+    communicate(input=None, timeout=None)
+
+        Interact with process: Send data to stdin. Read data from stdout and stderr, until end-of-file is reached. Wait for the process to terminate and set the returncode attribute. The optional input argument should be data to be sent to the child process, or None, if no data should be sent to the child. If streams were opened in text mode, input must be a string. Otherwise, it must be bytes.
+
+    detach()
+
+    kill()
+
+        Kills the child
+
+    pid: int
+
+        The process ID of the child process.
+
+    poll()
+
+        Check if the child process has terminated. Set and return returncode attribute. Otherwise, returns None.
+
+    returncode: int
+
+        The child return code, set by poll() and wait() (and indirectly by communicate()). A None value indicates that the process hasn’t terminated yet.
+
+    stderr: IO
+
+        If the stderr argument was PIPE, this attribute is a readable stream object as returned by open(). Reading from the stream provides error output from the child process. If the encoding or errors arguments were specified or the universal_newlines argument was True, the stream is a text stream, otherwise it is a byte stream. If the stderr argument was not PIPE, this attribute is None.
+
+    stdin: IO
+
+        If the stdin argument was PIPE, this attribute is a writeable stream object as returned by open(). If the encoding or errors arguments were specified or the universal_newlines argument was True, the stream is a text stream, otherwise it is a byte stream. If the stdin argument was not PIPE, this attribute is None.
+
+    stdout: IO
+
+        If the stdout argument was PIPE, this attribute is a readable stream object as returned by open(). Reading from the stream provides output from the child process. If the encoding or errors arguments were specified or the universal_newlines argument was True, the stream is a text stream, otherwise it is a byte stream. If the stdout argument was not PIPE, this attribute is None.
+
+    terminate()
+
+        Stop the child.
+
+    wait(timeout: Optional[float] = None)
+
+        Wait for child process to terminate. Set and return returncode attribute.
+
+        If the process does not terminate after timeout seconds, raise a TimeoutExpired exception. It is safe to catch this exception and retry the wait.
+

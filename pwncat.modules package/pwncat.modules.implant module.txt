@@ -1,0 +1,44 @@
+pwncat supports abstract local and remote implants. Implants provide a way for pwncat to either remotely reconnect or locally escalate privileges. Escalation modules should be placed organizationally under the implant/ package.
+
+An implant module implements a single method named install and can take any arbitrary arguments. The install method must return an Implant subclass. This class is what tracks implant installation, and allows for triggering and removing the implant.
+
+After installation, the Implant object is added to the database and can be located using the enumerate module and searching for implant.* fact types.
+
+For examples of implant modules, see the pam and passwd built-in implants located in pwncat/modules/linux/implant/.
+
+class pwncat.modules.implant.ImplantModule
+
+    Bases: pwncat.modules.BaseModule
+
+    Base class for all implant modules.
+
+    Implants must implement the :func:install method and cannot override the run() method. The install method takes the same arguments as the standard run() method, including all your custom arguments.
+
+    The install method must be a generator which yields Status instances, and returns a Implant object. Implant objects track the installed implant, and also provide methods for triggering, escalation and removal. Check the documentation for the Implant class for more details.
+
+    ARGUMENTS: Dict[str, pwncat.modules.Argument] = {}
+
+        The default arguments for any persistence module. If other arguments are specified in sub-classes, these must also be included to ensure compatibility across persistence modules.
+
+    COLLAPSE_RESULT: bool = True
+
+        The run method returns a single scalar value even though it utilizes a generator to provide status updates.
+
+    install(**kwargs)
+
+        Install the implant on the target host and return a new implant instance. The implant will be automatically added to the database. Arguments aside from remove and escalate are passed directly to the install method.
+
+        Parameters
+
+                session (pwncat.manager.Session) – the session on which to operate
+
+                kwargs – Any custom arguments defined in your ARGUMENTS dictionary.
+
+        Raises
+
+            ModuleFailed – installation failed.
+
+    run(session: pwncat.manager.Session, **kwargs)
+
+        This method should not be overriden by subclasses. It handles all logic for installation, escalation, connection, and removal. The standard interface of this method allows abstract interactions across all persistence modules.
+

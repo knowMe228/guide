@@ -1,0 +1,53 @@
+This module houses the core pwncat configuration classes. pwncat configuration is not free-form. There are a specific set of known configuration names which can be set, and each one has a specific type. Type-checking is done at assignment by executing the callable used as the type for a given configuration. Configuration types generally do a good job of converting strings from the interactive promp to legitimate values for the configuration being modified. If it cannot be converted, a ValueError is raised.
+
+There is currently no way to augment the configuration items exposed by pwncat. This may be added in the future, but currently, any configuration should be specific to your module or command.
+
+Note
+
+If a module requires an argument which matches the name of a global configuration, the value from the global configuration will be used as the default. This can be used, for example, to automatically utilize the global values for backdoor users or keys in your modules as configured by the user and decrease the number of required parameters to a module.
+
+class pwncat.config.Config
+
+    Bases: object
+
+    back()
+
+        Remove the currently used module and clear locals
+
+    binding(name_or_value: Union[str, bytes]) → str
+
+        Get a key binding by it’s key name or key value.
+
+    copy() → pwncat.config.Config
+
+        Copy this configuration object exactly. This is mainly used to allow for the possibility of running modules in the background without being affected by future configuration changes.
+
+    get(name: str, default=None)
+
+        get a value
+
+    set(name: str, value: Any, glob: bool = False)
+
+        Set a config value
+
+    use(module: pwncat.modules.BaseModule)
+
+        Use the specified module. This clears the current locals configuration.
+
+class pwncat.config.KeyType(name: str)
+
+    Bases: object
+
+pwncat.config.bool_type(value: str) → bool
+
+pwncat.config.key_type(value: str) → bytes
+
+    Converts a key name to a ansi keycode. The value can either be a single printable character or a named key from prompt_toolkit Keys
+
+pwncat.config.local_dir_type(value: str) → str
+
+    Ensure the path specifies a local directory
+
+pwncat.config.local_file_type(value: str) → str
+
+    Ensure the local file exists

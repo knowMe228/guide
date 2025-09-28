@@ -1,0 +1,167 @@
+The gtfobins module provides an abstract interface into the GTFOBins database. The GTFOBins database maps binaries to special permissions which could be used for privilege escalation (among other things). Internally, pwncat uses this database to identify ways to read/write files as well as during escalation with things like SETUID binaries and sudo rules. A full list of all supported binaries can be seen in pwncat/data/gtfobins.json.
+
+class pwncat.gtfobins.Binary(gtfo: pwncat.gtfobins.GTFOBins, name: str, methods: List[Dict[str, Any]])
+
+    Bases: object
+
+    Encapsulates a GTFOBin and it’s methods for all capabilities
+
+    iter_methods(binary_path: str, caps: pwncat.gtfobins.Capability, stream: pwncat.gtfobins.Stream, spec: Optional[str] = None)
+
+        Iterate over methods in this binary matching the capability and stream masks
+
+exception pwncat.gtfobins.BinaryNotFound
+
+    Bases: Exception
+
+    The binary asked for either doesn’t provided the required functionality or isn’t present on the remote system
+
+flag pwncat.gtfobins.Capability(value)
+
+    Bases: enum.Flag
+
+    The capabilities of a given GTFOBin Binary. A binary may have multiple implementations of each capability, but these flags indicate a list of all capabilities which a given binary supports.
+
+    Valid values are as follows:
+
+    READ = <Capability.READ: 1>
+
+    WRITE = <Capability.WRITE: 2>
+
+    SHELL = <Capability.SHELL: 4>
+
+    ALL = <Capability.ALL: 7>
+
+    NONE = <Capability.NONE: 0>
+
+class pwncat.gtfobins.ControlCodes
+
+    Bases: object
+
+    CTRL_C = '\x03'
+
+    CTRL_D = '\x04'
+
+    CTRL_O = '\x0f'
+
+    CTRL_R = '\x12'
+
+    CTRL_T = '\x14'
+
+    CTRL_X = '\x18'
+
+    CTRL_Z = '\x1a'
+
+    ESCAPE = '\x1b'
+
+class pwncat.gtfobins.GTFOBins(gtfobins: str, which: Callable[[str], str])
+
+    Bases: object
+
+    Wrapper around the GTFOBins database. Provides access to searching for methods of performing various capabilities generically. All iterations yield MethodWrapper objects.
+
+    Parameters
+
+            gtfobins (str) – path to the gtfobins database
+
+            which (Callable[[str, Optional[bool]], str]) – a callable which resolves binary basenames to full paths. A second parameter indicates whether the returned path should be quoted as with shlex.quote.
+
+    find_binary(binary_path: str, caps: pwncat.gtfobins.Capability = Capability.ALL)
+
+        Locate a binary by name. Only return a binary if the capabilities overlap. Raise an BinaryNotFound exception if the capabilities don’t match or the given binary doesn’t exist on the remote system.
+
+    iter_binary(binary_path: str, caps: pwncat.gtfobins.Capability = Capability.ALL, stream: Optional[pwncat.gtfobins.Stream] = None, spec: Optional[str] = None) → Generator[pwncat.gtfobins.MethodWrapper, None, None]
+
+        Iterate over methods for the given remote binary path. A binary will be located by taking the basename of the given path, and the cross- referencing with the given capabilities and stream types.
+
+    iter_methods(caps: pwncat.gtfobins.Capability = Capability.ALL, stream: Optional[pwncat.gtfobins.Stream] = None, spec: Optional[str] = None) → Generator[pwncat.gtfobins.MethodWrapper, None, None]
+
+        Iterate over methods which provide the given capabilities
+
+    iter_sudo(spec: str, caps: pwncat.gtfobins.Capability = Capability.ALL, stream: Optional[pwncat.gtfobins.Stream] = None, **kwargs)
+
+        Iterate over methods which are sudo-capable w/ the given sudo spec. This will restrict the search to those binaries which match the given sudo command spec.
+
+    parse_binary_data(binary_data: Dict[str, List[Dict[str, Any]]])
+
+        Parse the given GTFObins binary information into the associated in-memory binary objects
+
+    resolve_binaries(target: str, **args)
+
+        resolve any missing binaries with the self.which method
+
+class pwncat.gtfobins.Method(binary: pwncat.gtfobins.Binary, cap: pwncat.gtfobins.Capability, data: Dict[str, Any])
+
+    Bases: object
+
+    Abstract method class built from the JSON database
+
+    build_payload(gtfo: pwncat.gtfobins.GTFOBins, binary_path: str, spec: Optional[str] = None, user: Optional[str] = None, suid: bool = False, **kwargs) → str
+
+        Generate a read payload
+
+    sudo_args(binary_path: str, spec: str) → bool
+
+        Check if this method is compatible with the given sudo command spec. It will evaluate whether there are wildcards, or if the given parameters satisfy the parameters needed for this method. The method returns the list of arguments that need to be added_lines to the sudo spec in order for it to run this method.
+
+        If this method is incompatible with the given sudo spec, SudoNotPossible is raised. If this spec is compatible, a list of arguments which need to be appended to the spec is returned.
+
+class pwncat.gtfobins.MethodWrapper(method: pwncat.gtfobins.Method, binary_path: str)
+
+    Bases: object
+
+    Wraps a method and full binary path pair which together are capable of generating a payload to perform the specified capability.
+
+    build(gtfo: pwncat.gtfobins.GTFOBins, **kwargs) → Tuple[str, str, str]
+
+        Build the payload for this method and binary path. Depending on capability and stream type, different named parameters are required.
+
+    property cap: pwncat.gtfobins.Capability
+
+        Access this methods capabilities
+
+    exit(gtfo: pwncat.gtfobins.GTFOBins, **kwargs) → str
+
+    input(gtfo: pwncat.gtfobins.GTFOBins, **kwargs) → str
+
+    payload(gtfo: pwncat.gtfobins.GTFOBins, **kwargs) → str
+
+    property stream: pwncat.gtfobins.Stream
+
+        Access this methods stream type
+
+    wrap_stream(pipe: BinaryIO) → IO
+
+        Wrap the given BinaryIO pipe with the appropriate stream wrapper for this method. For “RAW” or “PRINT” streams, this is a null wrapper. For BASE64 and HEX streams, this will automatically decode the data as it is streamed. Closing the wrapper will automatically close the underlying pipe.
+
+exception pwncat.gtfobins.MissingBinary
+
+    Bases: Exception
+
+    A method required an external binary that didn’t exist
+
+flag pwncat.gtfobins.Stream(value)
+
+    Bases: enum.Flag
+
+    What time of streaming data is required for a specific method.
+
+    Valid values are as follows:
+
+    RAW = <Stream.RAW: 1>
+
+    PRINT = <Stream.PRINT: 2>
+
+    HEX = <Stream.HEX: 4>
+
+    BASE64 = <Stream.BASE64: 8>
+
+    ANY = <Stream.ANY: 15>
+
+    NONE = <Stream.NONE: 0>
+
+exception pwncat.gtfobins.SudoNotPossible
+
+    Bases: Exception
+
+    The given sudo command spec is not compatible with the method attempted.

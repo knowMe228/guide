@@ -1,0 +1,48 @@
+Linux specific facts which are used in multiple places throughout the framework.
+
+class pwncat.facts.linux.LinuxGroup(source: str, group_name: str, hash: Optional[str], gid: int, members: List[int], password: Optional[str] = None)
+
+    Bases: pwncat.facts.Group
+
+    Linux-specific group definition this augments the base pwncat.facts.Group class to hold data specific to Linux.
+
+    Parameters
+
+            source (str) – the generating module name
+
+            group_name (str) – name of the user
+
+            hash (Optional[str]) – password hash if known
+
+            gid (int) – group identifier
+
+            members (List[int]) – list of user identifiers who are members of this group
+
+            password (str) – the users password, if known
+
+class pwncat.facts.linux.LinuxUser(source: str, name: str, hash: Optional[str], uid: int, gid: int, comment: str, home: str, shell: str, password: Optional[str] = None)
+
+    Bases: pwncat.facts.User
+
+    Linux-specific user definition. This augments the base pwncat.facts.User class to hold data specific to Linux.
+
+    Parameters
+
+            source (str) – the generating module name
+
+            name (str) – name of the user
+
+            hash (Optional[str]) – password hash if known
+
+            uid (int) – user identifier
+
+            gid (int) – group identifier
+
+            comment (str) – user comment (sometimes called full name)
+
+            home (str) – the path to the users home directory
+
+            shell (str) – path to the users login shell
+
+            password (str) – the users password, if known
+

@@ -1,0 +1,110 @@
+Windows-specific facts which are used in multiple places throughout the framework.
+
+flag pwncat.facts.windows.LuidAttribute(value)
+
+    Bases: enum.IntFlag
+
+    An enumeration.
+
+    Member Type
+
+        int
+
+    Valid values are as follows:
+
+    DISABLED = <LuidAttribute.DISABLED: 0>
+
+    SE_PRIVILEGE_ENABLED_BY_DEFAULT = <LuidAttribute.SE_PRIVILEGE_ENABLED_BY_DEFAULT: 1>
+
+    SE_PRIVILEGE_ENABLED = <LuidAttribute.SE_PRIVILEGE_ENABLED: 2>
+
+    SE_PRIVILEGE_REMOVED = <LuidAttribute.SE_PRIVILEGE_REMOVED: 4>
+
+    SE_PRIVILEGE_USED_FOR_ACCESS = <LuidAttribute.SE_PRIVILEGE_USED_FOR_ACCESS: 2147483648>
+
+class pwncat.facts.windows.ProcessTokenPrivilege(source: str, name: str, attributes: int, handle: int, pid: int)
+
+    Bases: pwncat.db.Fact
+
+    Describes a specific privilege
+
+    title(session: pwncat.manager.Session)
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+class pwncat.facts.windows.UserToken(source: str, uid: str, token: int)
+
+    Bases: pwncat.facts.ability.ExecuteAbility
+
+    can_impersonate(session: pwncat.manager.Session)
+
+        Test if the current session can impersonate tokens
+
+    shell(session: pwncat.manager.Session) → Callable[[pwncat.manager.Session], None]
+
+        Execute a new shell as the specified user. In this case, just impersonate the user.
+
+    title(session: pwncat.manager.Session)
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+class pwncat.facts.windows.WindowsGroup(source: str, name: str, gid: str, description: str, principal_source: str, members: List[str], domain: Optional[str] = None)
+
+    Bases: pwncat.facts.Group
+
+    Windows-specific group. This augments the Group class.
+
+    Parameters
+
+            source (str) – the generating module
+
+            name (str) – the group name
+
+            gid (str) – the group SID
+
+            description (str) – description for this group
+
+            principal_source (str) – honestly, again, I have no clue
+
+            members (List[str]) – list of SIDs for group members
+
+class pwncat.facts.windows.WindowsUser(source: str, name: str, uid: str, account_expires: Optional[datetime.datetime], description: str, enabled: bool, full_name: str, password_changeable_date: Optional[datetime.datetime], password_expires: Optional[datetime.datetime], user_may_change_password: bool, password_required: bool, password_last_set: Optional[datetime.datetime], last_logon: Optional[datetime.datetime], principal_source: str, password: Optional[str] = None, hash: Optional[str] = None, well_known: bool = False)
+
+    Bases: pwncat.facts.User
+
+    Windows-specific user data. This augments the User class.
+
+    Parameters
+
+            source (str) – the generating module
+
+            name (str) – the name of the user
+
+            uid (str) – the user identifier
+
+            account_expires (Optional[datetime]) – the date/time when the account expires
+
+            description (str) – description for this account
+
+            enabled (bool) – whether this account is enabled
+
+            full_name (str) – the full name of the user
+
+            password_changeable_date (Optional[datetime]) – the date/time when the password is changeable
+
+            password_expires (Optional[datetime]) – the date/time when the password expires
+
+            user_may_change_password (bool) – whether the user can change their own password
+
+            password_required (bool) – whether the password is required for login
+
+            password_last_set (Optional[datetime]) – when the password was last changed
+
+            last_logon (Optional[datetime]) – the last time the user logged in
+
+            principal_source (str) – honestly, I’m not sure
+
+            password (Optional[str] = None) – the user’s password if known
+
+            hash (Optional[str] = None) – the user’s password hash if known
+

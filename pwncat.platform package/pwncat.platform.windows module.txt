@@ -1,0 +1,505 @@
+This platform supports interaction with a Windows target where either a cmd.exe or powershell.exe stdio is connected directly to the active channel. pwncat will utilize the C2 libraries located at pwncat-windows-c2 This will be automatically downloaded to the directory identified by the windows_c2_dir configuration which defaults to ~/.local/share/pwncat/. It will be uploaded and executed via Install-Util in order to automatically bypass AppLocker, and will provide you an un-logged, unconstrained powershell session as well as basic process and file IO routines.
+
+When operating in a platform-specific environment, you can safely execute multiple processes and open multiple files with this platform. However, you should be careful to cleanup all processes and files prior to return from your method or code as the C2 will not attempt to garbage collect file or process handles.
+
+class pwncat.platform.windows.BuiltinPluginInfo(name: str, provides: List[str], url: str, version: str)
+
+    Bases: object
+
+    Tells pwncat where to find a builtin plugin
+
+    name: str
+
+        A friendly name used when loading the plugin
+
+    provides: List[str]
+
+        List of DLL names which this plugin provides
+
+    url: str
+
+        URL pointing to a tar.gz file containing the plugin DLL(s)
+
+    version: str
+
+        The version number to download (this is formatted into the URL)
+
+class pwncat.platform.windows.DotNetPlugin(platform: pwncat.platform.windows.Windows, name: str, checksum: str, ident: int)
+
+    Bases: object
+
+    Represents a reflectively loaded .Net plugin within the remote C2 This class is a helper which makes calling methods within a plugin more straightforward. If you want to call a method named get_system you can use one of two syntaxes:
+
+    plugin.run("get_system", "arguments", 1, 2, False)
+    plugin.get_system("arguments", 1, 2, False)
+
+    Parameters
+
+            name (str) – basename of the file which was loaded
+
+            checksum (str) – md5sum of the assembly
+
+            ident (int) – identifier for the remote assembly
+
+    run(method: str, *args)
+
+        Execute a method within the plugin
+
+class pwncat.platform.windows.PopenWindows(platform: pwncat.platform.Platform, args, stdout, stdin, stderr, text, encoding, errors, bufsize, result)
+
+    Bases: pwncat.subprocess.Popen
+
+    Windows-specific Popen wrapper class
+
+    args: List[str]
+
+        The args argument as it was passed to Popen – a sequence of program arguments or else a single string.
+
+    cleanup()
+
+    communicate(input=None, timeout=None)
+
+        Interact with process: Send data to stdin. Read data from stdout and stderr, until end-of-file is reached. Wait for the process to terminate and set the returncode attribute. The optional input argument should be data to be sent to the child process, or None, if no data should be sent to the child. If streams were opened in text mode, input must be a string. Otherwise, it must be bytes.
+
+    detach()
+
+    kill()
+
+        Kills the child
+
+    pid: int
+
+        The process ID of the child process.
+
+    poll()
+
+        Poll if the process has completed and get return code
+
+    returncode: int
+
+        The child return code, set by poll() and wait() (and indirectly by communicate()). A None value indicates that the process hasn’t terminated yet.
+
+    stderr: IO
+
+        If the stderr argument was PIPE, this attribute is a readable stream object as returned by open(). Reading from the stream provides error output from the child process. If the encoding or errors arguments were specified or the universal_newlines argument was True, the stream is a text stream, otherwise it is a byte stream. If the stderr argument was not PIPE, this attribute is None.
+
+    stdin: IO
+
+        If the stdin argument was PIPE, this attribute is a writeable stream object as returned by open(). If the encoding or errors arguments were specified or the universal_newlines argument was True, the stream is a text stream, otherwise it is a byte stream. If the stdin argument was not PIPE, this attribute is None.
+
+    stdout: IO
+
+        If the stdout argument was PIPE, this attribute is a readable stream object as returned by open(). Reading from the stream provides output from the child process. If the encoding or errors arguments were specified or the universal_newlines argument was True, the stream is a text stream, otherwise it is a byte stream. If the stdout argument was not PIPE, this attribute is None.
+
+    terminate()
+
+        Stop the child.
+
+    wait(timeout: Optional[float] = None)
+
+        Wait for child process to terminate. Set and return returncode attribute.
+
+        If the process does not terminate after timeout seconds, raise a TimeoutExpired exception. It is safe to catch this exception and retry the wait.
+
+exception pwncat.platform.windows.PowershellError(msg)
+
+    Bases: pwncat.platform.PlatformError
+
+    Executing a powershell script caused an error
+
+exception pwncat.platform.windows.ProtocolError(code: int, message: str)
+
+    Bases: pwncat.platform.PlatformError
+
+class pwncat.platform.windows.Windows(session: pwncat.session.Session, channel: pwncat.channel.Channel, *args, **kwargs)
+
+    Bases: pwncat.platform.Platform
+
+    Concrete platform class abstracting interaction with a Windows/ Powershell remote host. The remote windows host must support powershell for this platform to function, and the channel must be established with an open powershell session.
+
+    C2_VERSION = 'v0.2.1'
+
+    PATH_TYPE
+
+        alias of pathlib.PureWindowsPath
+
+    PLUGIN_INFO = [BuiltinPluginInfo(name='windows-c2', provides=['stageone.dll', 'stagetwo.dll'], url='https://github.com/calebstewart/pwncat-windows-c2/releases/download/{version}/pwncat-windows-{version}.tar.gz', version='v0.2.1'), BuiltinPluginInfo(name='badpotato', provides=['BadPotato.dll'], url='https://github.com/calebstewart/pwncat-badpotato/releases/download/{version}/pwncat-badpotato-{version}.tar.gz', version='v0.0.1-alpha')]
+
+    Popen(args, bufsize=- 1, stdin=None, stdout=None, stderr=None, shell=False, cwd=None, encoding=None, text=None, errors=None, env=None, bootstrap_input=None, **other_popen_kwargs) → pwncat.subprocess.Popen
+
+        Execute a process on the remote host with an interface similar to that of the python standard subprocess.Popen. The returned object behaves much like a standard Popen object and conforms to the interface defined by pwncat.subprocess.Popen. For an explanation of arguments, see pwncat.subprocess.Popen.
+
+    abspath(path: str) → str
+
+        Convert the given relative path to absolute.
+
+        Parameters
+
+            path (str) – a relative path
+        Returns
+
+            an equivalent absolute path
+        Return type
+
+            str
+
+    chdir(path: str)
+
+        Change the current working directory
+
+    chmod(path: str, mode: int)
+
+        Change a file’s mode. Per the python documentation, this is only used to change the read-only flag for the Windows platform.
+
+    dotnet_load(name: str, content: Optional[Union[bytes, _io.BytesIO]] = None) → pwncat.platform.windows.DotNetPlugin
+
+        Reflectively load a .Net C2 plugin from the attacker machine. The plugin DLL should implement the Plugin class and method interface. The name argument can either be a path to a local DLL or the name of a DLL provided by a built-in plugin. Built-in plugins will be automatically downloaded if not present in the directory pointed to by the plugin_path configuration.
+
+        Plugins are also deduplicated prior to loading on the victim. If a given DLL name or a file with a matching hash has already been loaded, the existing plugin object is returned, and the DLL is not loaded again.
+
+        The return DotNetPlugin class is capable of cleanly translating method calls to the methods within the loaded DLL. For example, if plugin.dll defined a method named foo, which took a single string argument, you could call it with:
+
+        plugin = session.platform.dotnet_load("./plugin.dll")
+        result = plugin.foo("Hello World!")
+
+        Plugins can take as parameters and return any JSON-serializable objects.
+
+        Parameters
+
+                name (str) – name or path to the DLL to upload
+
+                content (Optional[Union[bytes, BytesIO]]) – content of the DLL to load or file-like object, if not present on disk
+
+        Return type
+
+            DotNetPlugin
+
+    exit()
+
+        Ensure the C2 exits on the victim end. This is called automatically by session.close, and shouldn’t be called manually.
+
+    get_host_hash()
+
+        Unique host identifier for this target. It is taken from the unique cryptographic GUID stored in the windows registry at install.
+
+    get_pty()
+
+        We don’t need to do this for windows
+
+    getenv(name: str) → str
+
+        Retrieve the value of a given environment variable in the current shell.
+
+        Parameters
+
+            name (str) – name of the environment variable
+        Returns
+
+            value of the variable
+        Return type
+
+            str
+
+    getuid()
+
+        Retrieve the cached User ID
+
+    impersonate(token: int)
+
+        Impersonate a user token in the powershell and .net contexts.
+
+        Parameters
+
+            token (int) – the user token to impersonate
+
+    property interactive
+
+    interactive_loop(interactive_complete: threading.Event)
+
+        Interactively read input from the attacker and send it to an interactive terminal on the victim. RawModeExit and ChannelClosed exceptions are handled by the manager appropriately. If any changes are made to the local TTY, they should be reverted before returning (ideally via a try-finally block). Output from the remote host is automatically piped to stdout via a background thread by the manager.
+
+    is_admin() → bool
+
+        Determine if our current user is an administrator user
+
+    is_system() → bool
+
+        Determine if our current user is SYSTEM We might not need this, because the users name SHOULD be system… but we implement it just in face
+
+    link_to(target: str, path: str)
+
+        Create hard link at path pointing to target. This will likely result in a PermissionError exception on Windows. It is implemented with the New-Item powershell commandlet.
+
+        Parameters
+
+                target (str) – the path to the target of the link
+
+                path (str) – the path to the new link object
+
+    listdir(path: str)
+
+        Return a list of items in the directory at the given relative or absolute directory path.
+
+        Parameters
+
+            path (str) – relative or abosolute directory path
+        Returns
+
+            list of file or directory names
+        Return type
+
+            List[str]
+
+    lstat()
+
+        Perform stat on a link instead of the target of the link.
+
+    mkdir(path: str, mode: int = 511, parents: bool = True)
+
+        Create a new directory. This is implemented with the New-Item commandlet.
+
+        Parameters
+
+                path (str) – path to the new directory
+
+                mode (int) – permissions for the directory (ignored for windows)
+
+                parents – whether to create all items (defaults to True for windows)
+
+    name = 'windows'
+
+        Name of this platform (e.g. “linux”)
+
+    new_item(**kwargs)
+
+        Run the New-Item commandlet with specified arguments and raise the appropriate local exception if required. For a list of valid arguments, see the New-Item help documentation.
+
+    open(path: Union[str, pwncat.platform.Path], mode: str = 'r', buffering: int = - 1, encoding: str = 'utf-8', errors: Optional[str] = None, newline: Optional[str] = None)
+
+        Mimic the built-in open method.
+
+    classmethod open_plugin(manager: pwncat.manager.Manager, name: str) → _io.BytesIO
+
+        Open the given plugin DLL for reading and return an open file object. If the given name matches a builtin plugin, it will be used. If a builtin plugin is not available, it will be downloaded from it’s URL and saved in the provided plugin path. If the name does not match a provided plugin DLL, it is interpreted as a path and attempted to be opened.
+
+        Parameters
+
+                manager (pwncat.manager.Manager) – the pwncat manager object used to locate the plugin directory
+
+                name (str) – name of the plugin being requested
+
+        Return type
+
+            BytesIO
+
+    parse_response(data: bytes)
+
+        Parse a line of data from the C2
+
+    powershell(script: Union[str, BinaryIO], depth: int = 1)
+
+        Execute a powershell script in the context of the C2. The results of the command are automatically serialized with ConvertTo-Json. You can control the depth of serialization, although with large objects this may impose significant performance impacts. The default depth is 1.
+
+        Parameters
+
+                script (Union[str, BinaryIO]) – a powershell script to execute on the target
+
+                depth (int) – the depth of serialization within the returned object, defaults to 1
+
+    process_output(data: bytes)
+
+        Process stdout while in interactive mode. This is called each time the victim output thread receives data. You can modify the input data and return a new copy if needed before output to the screen.
+
+        Parameters
+
+            data (bytes) – the data received from the victim in interactive mode
+
+    readlink()
+
+        Read the target of a filesystem link
+
+    refresh_uid()
+
+        Retrieve the current user ID. For Windows, this is done through System.Security.Principal.WindowsIdentity::GetCurrent().User.
+
+    rename(src: str, dst: str)
+
+        Rename a file
+
+        Parameters
+
+                src (str) – path to the source file
+
+                dst (str) – path or new name for the destination file
+
+    revert_to_self()
+
+        Revert any impersonations and return to the original user
+
+    rmdir(path: str, recurse: bool = False)
+
+        Remove a directory, optionally remove all contents first.
+
+        Parameters
+
+                path (str) – path to a directory to remove
+
+                recurse (bool) – whether to recursively remove all contents first
+
+    run_method(typ: str, method: str, *args, wait: bool = True)
+
+        Execute a method within the pwncat-windows-c2. You must specify the type and method arguments. Arguments are passed via json encoding so any valid JSON types should be passed correctly onto the C2. Named arguments are not supported. Results are returned as a dictionary. In the case of an error, a ProtocolError is raised with the error code and message.
+
+        Parameters
+
+                typ (str) – The type name where the method you’d like to execute resides
+
+                method (str) – The name of the method you’d like to execute
+
+                *args (correct type for given method) – the positional arguments for the method you are calling
+
+    setup_prompt()
+
+        Set a prompt method for powershell to ensure our prompt looks pretty :)
+
+    stat(path: str) → pwncat.platform.windows.stat_result
+
+        Perform a stat on the given path, returning important file system details on the file.
+
+        Parameters
+
+            path (str) – path to an existing file
+        Returns
+
+            the stat data
+        Return type
+
+            stat_result
+
+    symlink_to(target: str, path: str)
+
+        Create a symlink at path pointing to target. This is implemented using the New-Item powershell commandlet.
+
+        Parameters
+
+                target (str) – the path to the target of the link
+
+                path (str) – the path to the new link object
+
+    tempfile(mode: str, length: Optional[int] = 8, suffix: Optional[str] = None)
+
+        Create a temporary file in a safe directory. Optionally provide a suffix
+
+    touch(path: str)
+
+        Touch a file (aka update timestamps and possibly create).
+
+        Parameters
+
+            path (str) – path to new or existing file
+
+    umask(mask: Optional[int] = None)
+
+        Set or retrieve the current umask value
+
+    unlink(path: str)
+
+        Remove an entry from the file system.
+
+        Parameters
+
+            path (str) – path to a file or empty directory
+
+    whoami() → str
+
+        Retrieve the current user name
+
+        NOTE: This is not cached.
+
+class pwncat.platform.windows.WindowsFile(platform: pwncat.platform.windows.Windows, mode: str, handle: int, name: Optional[str] = None)
+
+    Bases: io.RawIOBase
+
+    Wrapper around file handles on Windows
+
+    close()
+
+        Close a file handle on the remote host
+
+    readable() → bool
+
+        Return whether object was opened for reading.
+
+        If False, read() will raise OSError.
+
+    readall()
+
+        Read until EOF
+
+    readinto(b: Union[memoryview, bytearray])
+
+    writable() → bool
+
+        Return whether object was opened for writing.
+
+        If False, write() will raise OSError.
+
+    write(data: bytes)
+
+        Write data to this file
+
+class pwncat.platform.windows.stat_result
+
+    Bases: object
+
+    Python os doesn’t provide a way to sanely construct a stat_result so I created this.
+
+    st_atime = 0
+
+    st_atime_ns = 0
+
+    st_birthtime = 0
+
+    st_blksize = 0
+
+    st_blocks = 0
+
+    st_creator = 0
+
+    st_ctime = 0
+
+    st_ctime_ns = 0
+
+    st_dev = 0
+
+    st_file_attributes = 0
+
+    st_flags = 0
+
+    st_fstype = 0
+
+    st_gen = 0
+
+    st_gid = 0
+
+    st_ino = 0
+
+    st_mode = 0
+
+    st_mtime = 0
+
+    st_mtime_ns = 0
+
+    st_nlink = 0
+
+    st_rdev = 0
+
+    st_reparse_tag = 0
+
+    st_rsize = 0
+
+    st_size = 0
+
+    st_type = 0
+
+    st_uid = 0

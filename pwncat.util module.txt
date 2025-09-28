@@ -1,0 +1,145 @@
+Various utility methods and classes which don’t fit in any other modules or packages.
+
+flag pwncat.util.Access(value)
+
+    Bases: enum.Flag
+
+    Check if you are able to read/write/execute a file
+
+    Valid values are as follows:
+
+    NONE = <Access.NONE: 0>
+
+    EXISTS = <Access.EXISTS: 1>
+
+    READ = <Access.READ: 2>
+
+    WRITE = <Access.WRITE: 4>
+
+    EXECUTE = <Access.EXECUTE: 8>
+
+    SUID = <Access.SUID: 16>
+
+    SGID = <Access.SGID: 32>
+
+    REGULAR = <Access.REGULAR: 64>
+
+    DIRECTORY = <Access.DIRECTORY: 128>
+
+    PARENT_EXIST = <Access.PARENT_EXIST: 256>
+
+    PARENT_WRITE = <Access.PARENT_WRITE: 512>
+
+exception pwncat.util.CommandSystemExit
+
+    Bases: Exception
+
+    A command has requested that we exit pwncat (mostly used for exit command)
+
+exception pwncat.util.CompilationError(source_error: bool, stdout: Optional[str], stderr: Optional[str])
+
+    Bases: Exception
+
+    Indicates that compilation failed on either the local or remote host.
+
+    Parameters
+
+        source_error – indicates whether there was a compilation error due to source code syntax. If not, this was due to a missing compiler.
+
+enum pwncat.util.Init(value)
+
+    Bases: enum.Enum
+
+    An enumeration.
+
+    Valid values are as follows:
+
+    UNKNOWN = <Init.UNKNOWN: 1>
+
+    SYSTEMD = <Init.SYSTEMD: 2>
+
+    UPSTART = <Init.UPSTART: 3>
+
+    SYSV = <Init.SYSV: 4>
+
+exception pwncat.util.RawModeExit
+
+    Bases: Exception
+
+    Indicates that the user would like to exit the raw mode shell. This is normally raised when the user presses the <prefix>+<C-d> key combination to return to the local prompt.
+
+enum pwncat.util.State(value)
+
+    Bases: enum.Enum
+
+    The current PtyHandler state
+
+    Valid values are as follows:
+
+    NORMAL = <State.NORMAL: 1>
+
+    RAW = <State.RAW: 2>
+
+    COMMAND = <State.COMMAND: 3>
+
+    SINGLE = <State.SINGLE: 4>
+
+pwncat.util.copyfileobj(src, dst, callback, nomv=False)
+
+    Copy a file object to another file object with a callback. This method assumes that both files are binary and support readinto
+
+pwncat.util.enter_raw_mode(non_block=True)
+
+    Set stdin/stdout to raw mode to pass data directly.
+
+    returns: the old state of the terminal
+
+pwncat.util.escape_markdown(s: str) → str
+
+    Escape any markdown special characters :param s: :return:
+
+pwncat.util.get_ip_addr() → str
+
+    Retrieve the current IP address. This will return the first tun/tap interface if availabe. Otherwise, it will return the first “normal” interface with no preference for wired/wireless.
+
+pwncat.util.human_readable_delta(seconds)
+
+    This produces a human-readable time-delta output suitable for output to the terminal. It assumes that “seconds” is less than 1 day. I.e. it will only display at most, hours minutes and seconds.
+
+pwncat.util.human_readable_size(size, decimal_places=2)
+
+pwncat.util.isprintable(data) → bool
+
+    This is a convenience function to be used rather than the usual str.printable boolean value, as that built-in DOES NOT consider newlines to be part of the printable data set (weird!)
+
+pwncat.util.join(argv: List[str])
+
+    Join the string much line shlex.join, except assume that each token is expecting double quotes. This allows variable references within the tokens.
+
+pwncat.util.pop_term_state()
+
+    Return the terminal to the state that was last pushed
+
+pwncat.util.push_term_state()
+
+    Save the current terminal state on our state stack so we can easily return to the current state.
+
+pwncat.util.quote(token: str)
+
+    Quote the token much like shlex.quote, except don’t use single quotes this will escape any double quotes in the string and wrap it in double quotes. If there are no spaces, it returns the string unchanged.
+
+pwncat.util.random_string(length: int = 8)
+
+    Create a random alphanumeric string
+
+pwncat.util.restore_terminal(state, new_line=True)
+
+    restore the stdio state from the result of “enter_raw_mode”
+
+pwncat.util.strip_ansi_escape(s: str) → str
+
+    Strip the ansi escape sequences out of the given string :param s: the string to strip :return: a version of ‘s’ without ansi escape sequences
+
+pwncat.util.strip_markup(styled_text: str) → str
+
+    Strip rich markup from text

@@ -1,0 +1,19 @@
+This package defines all database objects. pwncat internally uses the ZODB database, which stores data as persistent Python objects. Each class defined under this package is a persistent Python class which is stored verbatim in the database. For documentation on how to create persistent classes, please see the ZODB documentation.
+
+class pwncat.db.Binary(name, path)
+
+    Bases: persistent.Persistent
+
+    Store the name and path to binaries. This serves as the cache for pwncat.platform.Platform.which().
+
+class pwncat.db.Fact(types, source)
+
+    Bases: pwncat.modules.Result, persistent.Persistent
+
+    Abstract enumerated fact about an enumerated target. Individual enumeration modules will create subclasses containing the data for the fact. All facts are also implementations of Result which allows them to be generically displayed to the terminal.
+
+    category(session) → str
+
+        Return a “category” of object. Categories will be grouped. If this returns None or is not defined, this result will be “uncategorized”
+
+    property type

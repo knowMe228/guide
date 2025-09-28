@@ -1,0 +1,188 @@
+pwncat modules are the core extensible feature of pwncat. They provide a way for users to execute complex scripted target interaction efficiently from the local prompt. The most extensive feature is the enumeration modules allowing the user to quickly enumerate commonly useful information from the target, and save the data in a database for future access.
+
+There are standard modules implemented for enumerating arbitrary data, managing installed implants, and generating formatted reports on your targets. Modules are loaded from within the pwncat package by default, but can be loaded from other locations with the load command or the pwncat.manager.Manager.load_modules() method. When loading custom modules, a path to a Python package is given and any module within the package which defines a Module class that inherits from pwncat.modules.BaseModule will be imported and added to the module list.
+
+For an up-to-date list of standard modules and their usage, please consult the internal pwncat help/info documentation.
+Example Module
+Example Base Module
+
+class Module(BaseModule):
+    """ Module Documentation """
+
+    PLATFORM = [Linux]
+    ARGUMENTS = { "arg": Argument(str, help="help string") }
+
+    def run(self, session: "pwncat.manager.Session", arg: str):
+        yield Status("A status message!")
+        session.log(f"ran {self.name}")
+
+class pwncat.modules.Argument(type: Callable[[str], Any] = <class 'str'>, default: Any = <class 'pwncat.modules.NoValue'>, help: str = '')
+
+    Bases: object
+
+    Describes an individual module argument. Arguments to modules are always required. If an argument has the default NoValue then the module will fail if no value is provided by the user.
+
+    default
+
+        The default value for this argument. If set to NoValue, the argument must be set by the user.
+
+        alias of pwncat.modules.NoValue
+
+    help: str = ''
+
+        The help text displayed in the info output.
+
+    type
+
+        alias of str
+
+exception pwncat.modules.ArgumentFormatError
+
+    Bases: pwncat.modules.ModuleFailed
+
+    Format of one of the arguments was incorrect
+
+class pwncat.modules.BaseModule
+
+    Bases: object
+
+    Generic module class. This class allows to easily create new modules. Any new module must inherit from this class. The run method is guaranteed to receive as key-word arguments any arguments specified in the ARGUMENTS dictionary.
+
+    Results from the module are normally returned via the yield instruction. This allows pwncat to collect results and provide status output. However, you can also return a single item with the return statement. The pwncat.manager.Session.run() method will by default normally return an array. If you module only has a single result, you can set the COLLAPSE_RESULT property to True to tell pwncat to collapse a single-item array into a regular value.
+
+    If your module should take arbitrary, unnamed keyword arguments, you can use set the ALLOW_KWARGS property, which allows the user to pass arbitrary key-value pairs to your module. These values will normally be strings, but it is the responsibility of the module to conduct type-checking.
+
+    If the module is not platform-dependent, you can set the PLATFORM property to None.
+
+    ALLOW_KWARGS: bool = False
+
+        Allow other kwargs parameters outside of what is specified by the arguments dictionary. This allows arbitrary arguments which are not type-checked to be passed. You should use **kwargs in your run method if this is set to True.
+
+    ARGUMENTS: Dict[str, pwncat.modules.Argument] = {}
+
+        Arguments which can be provided to the run method. This maps argument names to Argument instances describing the type, default value, and requirements for an individual argument.
+
+    COLLAPSE_RESULT: bool = False
+
+        If you want to use yield Status(…) to update the progress bar but only return one scalar value, setting this to true will collapse an array with only a single object to it’s scalar value.
+
+    PLATFORM: List[Type[pwncat.platform.Platform]] = []
+
+        The platform this module is compatible with (can be multiple)
+
+    run(session: pwncat.manager.Session, progress: Optional[bool] = None, **kwargs)
+
+        The run method is called via keyword-arguments with all the parameters specified in the ARGUMENTS dictionary. If ALLOW_KWARGS was True, then other keyword arguments may also be passed. Any types specified in ARGUMENTS will already have been checked.
+
+        If there are any errors while processing a module, the module should raise ModuleError or a subclass in order to enable pwncat to automatically and gracefully handle a failed module execution.
+
+        If progress is None, the visibility of progress information will be inherited from the parent module. If this module was run directly by the framework, the default is to display progress information. If progress is False, no progress information will be displayed and any subsequent modules which set progress to None will not display progress information.
+
+        Parameters
+
+                session (pwncat.manager.Session) – the active session
+
+                progress (Optional[bool]) – whether to show progress information for this and subsequent modules
+
+class pwncat.modules.BaseModuleMeta(name, bases, local)
+
+    Bases: type
+
+    This is a metaclass which is used to ensure the run method is decorated properly for all modules.
+
+pwncat.modules.Bool(value: str)
+
+    Argument of type “bool”. Accepts true/false (case-insensitive) as well as 1/0. The presence of an argument of type “Bool” with no assignment (e.g. run module arg) is equivalent to run module arg=true.
+
+exception pwncat.modules.IncorrectPlatformError
+
+    Bases: pwncat.modules.ModuleFailed
+
+    The requested module didn’t match the current platform
+
+exception pwncat.modules.InvalidArgument
+
+    Bases: pwncat.modules.ModuleFailed
+
+    This argument does not exist and ALLOW_KWARGS was false
+
+pwncat.modules.List(_type=<class 'str'>)
+
+    Argument list type, which accepts a list of the provided type. By default, this accepts a list of strings.
+
+exception pwncat.modules.MissingArgument
+
+    Bases: pwncat.modules.ModuleFailed
+
+    A required argument is missing
+
+exception pwncat.modules.ModuleFailed
+
+    Bases: Exception
+
+    Base class for module failure
+
+exception pwncat.modules.ModuleNotFound
+
+    Bases: pwncat.modules.ModuleFailed
+
+    The specified module was not found
+
+class pwncat.modules.NoValue
+
+    Bases: object
+
+    Indicates that the module argument has no default value and is required.
+
+class pwncat.modules.Result
+
+    Bases: object
+
+    This class defines the interface for module results. Modules can yield or return results as needed, but each results must implement this interface. Inheriting from this class is enough to provide a suitable result, but it is recommended to override the title() method in order to provide a formatted title for your result. The category() method helps when organizing output with the run command.
+
+    category(session) → str
+
+        Return a “category” of object. Categories will be grouped. If this returns None or is not defined, this result will be “uncategorized”
+
+    description(session) → str
+
+        Returns a long-form description. If not defined, the result is assumed to not be a long-form result.
+
+    hidden: bool = False
+
+        Hide results from automatic display with the run command
+
+    is_long_form(session) → bool
+
+        Check if this is a long form result
+
+    title(session) → str
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+class pwncat.modules.Status
+
+    Bases: str
+
+    A result which isn’t actually returned, but simply updates the progress bar. It is equivalent to a string, so this is valid: yield Status("module status update")
+
+    category(session) → str
+
+        Return a “category” of object. Categories will be grouped. If this returns None or is not defined, this result will be “uncategorized”
+
+    description(session) → str
+
+        Returns a long-form description. If not defined, the result is assumed to not be a long-form result.
+
+    is_long_form(session) → bool
+
+        Check if this is a long form result
+
+    title(session) → str
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+pwncat.modules.run_decorator(real_run)
+
+    Decorate a run function to evaluate types. This is an internal method. Every module’s run method is decorated with this in order to first check arguments against the module definition and type-check/convert to the appropriate types. It is also responsible for creating the progress bar, collecting results and committing database changes.
+

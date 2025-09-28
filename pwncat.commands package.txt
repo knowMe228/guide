@@ -1,0 +1,265 @@
+This module implements the command parser, lexer, highlighter, etc for pwncat. Each command is defined as an individual module under pwncat/commands which defines a Command class that inherits from pwncat.commands.CommandDefinition.
+
+Each command is capable of specifying the expected arguments similar to the way they specified with argparse. Internally, we use the Parameter definitions to build an argparse parser. We also use them to build a lexer capable of automatic syntax highlighting at the prompt.
+
+To define a new command, simple create a new module under pwncat/commands and define a class named Command.
+Example Custom Command
+A Custom Command Placed in pwncat/commands
+
+class Command(CommandDefinition):
+    """ Command documentation placed in the docstring """
+
+    PROG = "custom"
+    ARGS = {
+        "--option,-o": Parameter(Complete.NONE, help="help info", action="store_true"),
+        "positional": Parameter(
+            Complete.CHOICES,
+            metavar="POSITIONAL",
+            choices=["hello", "world"],
+            help="help information",
+        ),
+    }
+
+    def run(self, manager: "pwncat.manager.Manager", args: "argparse.Namespace"):
+        manager.log("we ran a custom command!")
+
+class pwncat.commands.CommandCompleter(manager: pwncat.manager.Manager, commands: List[CommandDefinition])
+
+    Bases: prompt_toolkit.completion.base.Completer
+
+    Tab-complete commands and all of their arguments dynamically using the command definitions and their associated argument definitions.
+
+    get_completions(document: prompt_toolkit.document.Document, complete_event: prompt_toolkit.completion.base.CompleteEvent) → Iterable[prompt_toolkit.completion.base.Completion]
+
+        Get a list of completions for the given document
+
+class pwncat.commands.CommandDefinition(manager: pwncat.manager.Manager)
+
+    Bases: object
+
+    Generic structure for a local command.
+
+    The docstring for your command class becomes the long-form help for your command. See the above example for a complete custom command definition.
+
+    Parameters
+
+        manager (pwncat.manager.Manager) – the controlling manager for this command
+
+    ARGS: Dict[str, pwncat.commands.Parameter] = {}
+
+        A dictionary of parameter definitions created with the Parameter class. If this is None, your command will receive the raw argument string and no processing will be done except removing the leading command name.
+
+    DEFAULTS = {}
+
+        A dictionary of default values (passed directly to ArgumentParser.set_defaults)
+
+    GROUPS: Dict[str, pwncat.commands.Group] = {}
+
+        A dictionary mapping group definitions to group names. The parameters to Group are passed directly to either add_argument_group or add_mutually_exclusive_group with the exception of the mutex arg, which determines the group type.
+
+    LOCAL = False
+
+        Whether this command is purely local or requires an connected remote host
+
+    PROG = 'unimplemented'
+
+        The name of your new command
+
+    build_parser(parser: argparse.ArgumentParser, args: Dict[str, pwncat.commands.Parameter], group_defs: Dict[str, pwncat.commands.Group])
+
+        Parse the ARGS and DEFAULTS dictionaries to build an argparse ArgumentParser for this command. You should not need to overload this.
+
+        Parameters
+
+                parser – the parser object to add arguments to
+
+                args – the ARGS dictionary
+
+    run(manager: pwncat.manager.Manager, args)
+
+        This is the “main” for your new command. This should perform the action represented by your command.
+
+        Parameters
+
+                manager (pwncat.manager.Manager) – the manager to operate on
+
+                args – the argparse Namespace containing your parsed arguments
+
+class pwncat.commands.CommandLexer(*args, **kwds)
+
+    Bases: pygments.lexer.RegexLexer
+
+    Implements a Regular Expression based pygments lexer for dynamically highlighting the pwncat prompt during typing. The tokens are generated from command definitions.
+
+    classmethod build(commands: List[pwncat.commands.CommandDefinition]) → Type[pwncat.commands.CommandLexer]
+
+        Build the RegexLexer token list from the command definitions
+
+    tokens = {}
+
+        At all time there is a stack of states. Initially, the stack contains a single state ‘root’. The top of the stack is called “the current state”.
+
+        Dict of {'state': [(regex, tokentype, new_state), ...], ...}
+
+        new_state can be omitted to signify no state transition. If new_state is a string, it is pushed on the stack. This ensure the new current state is new_state. If new_state is a tuple of strings, all of those strings are pushed on the stack and the current state will be the last element of the list. new_state can also be combined('state1', 'state2', ...) to signify a new, anonymous state combined from the rules of two or more existing ones. Furthermore, it can be ‘#pop’ to signify going back one step in the state stack, or ‘#push’ to push the current state on the stack again. Note that if you push while in a combined state, the combined state itself is pushed, and not only the state in which the rule is defined.
+
+        The tuple can also be replaced with include('state'), in which case the rules from the state named by the string are included in the current one.
+
+class pwncat.commands.CommandParser(manager: pwncat.manager.Manager)
+
+    Bases: object
+
+    Handles dynamically loading command classes, parsing input, and dispatching commands. This class effectively has complete control over the terminal whenever in an interactive pwncat session. It will change termios modes for the control tty at will in order to support raw vs command mode.
+
+    dispatch_line(line: str, prog_name: Optional[str] = None)
+
+        Parse the given line of command input and dispatch a command
+
+    eval(source: str, name: str = '<script>')
+
+        Evaluate the given source file. This will execute the given string as a script of commands. Syntax is the same except that commands may be separated by semicolons, comments are accepted as following a “#” and multiline strings are supported with ‘”{‘ and ‘}”’ as delimeters.
+
+    parse_prefix(channel, data: bytes)
+
+        Parse data received from the user when in pwncat’s raw mode. This will intercept key presses from the user and interpret the prefix and any bound keyboard shortcuts. It also sends any data without a prefix to the remote channel.
+
+        Parameters
+
+            data (bytes) – input data from user
+
+    raw_mode()
+
+        Save the current terminal state and enter raw mode. If the terminal is already in raw mode, this function does nothing.
+
+    restore_term(new_line=True)
+
+        Restores the normal terminal settings. This does nothing if the terminal is not currently in raw mode.
+
+    run()
+
+        Execute the pwncat REPL. This will continue running until an InteractiveExit exception or a EOFError exception are raised.
+
+    run_single()
+
+        Execute one Read-Execute iteration. This will prompt the user for input.
+
+    setup_prompt()
+
+        This needs to happen after __init__ when the database is fully initialized.
+
+enum pwncat.commands.Complete(value)
+
+    Bases: enum.Enum
+
+    Command argument completion options. This defines how tab completion works for an individual command parameter/argument. If you choose to use the CHOICES type, you must specify the argparse choices argument to the Parameter constructor. This argument can either be an iterable or a callable which returns a generator. The callable takes as an argument the manager. This allows you to have contextual tab completions if needed.
+
+    Valid values are as follows:
+
+    CHOICES = <Complete.CHOICES: 1>
+
+    LOCAL_FILE = <Complete.LOCAL_FILE: 2>
+
+    REMOTE_FILE = <Complete.REMOTE_FILE: 3>
+
+    NONE = <Complete.NONE: 4>
+
+class pwncat.commands.DatabaseHistory(manager)
+
+    Bases: prompt_toolkit.history.History
+
+    Yield history from the host entry in the database
+
+    load_history_strings() → Iterable[str]
+
+        Load the history from the database
+
+    store_string(string: str) → None
+
+        Store a command in the database
+
+class pwncat.commands.Group(mutex: bool = False, **kwargs)
+
+    Bases: object
+
+    This just wraps the parameters to the add_argument_group and add_mutually_exclusive_group
+
+class pwncat.commands.LocalPathCompleter
+
+    Bases: prompt_toolkit.completion.base.Completer
+
+    Complete local file names/paths.
+
+    get_completions(document: prompt_toolkit.document.Document, complete_event: prompt_toolkit.completion.base.CompleteEvent)
+
+        This should be a generator that yields Completion instances.
+
+        If the generation of completions is something expensive (that takes a lot of time), consider wrapping this Completer class in a ThreadedCompleter. In that case, the completer algorithm runs in a background thread and completions will be displayed as soon as they arrive.
+
+        Parameters
+
+                document – Document instance.
+
+                complete_event – CompleteEvent instance.
+
+class pwncat.commands.Parameter(complete: pwncat.commands.Complete, token=Token.Name.Label, group: Optional[str] = None, *args, **kwargs)
+
+    Bases: object
+
+    Generic parameter definition for commands.
+
+    This class allows you to specify the syntax highlighting, tab completion and argparse settings for a command parameter in on go. The complete argument tells pwncat how to tab complete your argument. The token argument is normally omitted but can be used to change the pygments syntax highlighting for your argument. All other arguments are passed directly to argparse when constructing the parser.
+
+    Parameters
+
+            complete (Complete) – the completion type
+
+            token (Pygments Token) – the Pygments token to highlight this argument with
+
+            group – true for a group definition, a string naming the group to be a part of, or none
+
+            mutex – for group definitions, indicates whether this is a mutually exclusive group
+
+            args – positional arguments for add_argument or add_argument_group
+
+            kwargs – keyword arguments for add_argument or add_argument_group
+
+class pwncat.commands.RemotePathCompleter(manager: pwncat.manager.Manager, *args, **kwargs)
+
+    Bases: prompt_toolkit.completion.base.Completer
+
+    Complete remote file names/paths
+
+    get_completions(document: prompt_toolkit.document.Document, complete_event: prompt_toolkit.completion.base.CompleteEvent)
+
+        This should be a generator that yields Completion instances.
+
+        If the generation of completions is something expensive (that takes a lot of time), consider wrapping this Completer class in a ThreadedCompleter. In that case, the completer algorithm runs in a background thread and completions will be displayed as soon as they arrive.
+
+        Parameters
+
+                document – Document instance.
+
+                complete_event – CompleteEvent instance.
+
+pwncat.commands.StoreConstForAction(action: List[str]) → Callable
+
+    Generates a custom argparse Action subclass which verifies that the current selected “action” option is one of the provided actions in this function. If not, an error is raised. This stores the constant const to the dest argument. This is comparable to store_const, but checks that you have selected one of the specified actions.
+
+class pwncat.commands.StoreConstOnce(option_strings, dest, nargs=None, const=None, default=None, type=None, choices=None, required=False, help=None, metavar=None)
+
+    Bases: argparse.Action
+
+    Only allow the user to store a value in the destination once. This prevents users from selection multiple actions in the privesc parser.
+
+pwncat.commands.StoreForAction(action: List[str]) → Callable
+
+    Generates a custom argparse Action subclass which verifies that the current selected “action” option is one of the provided actions in this function. If not, an error is raised.
+
+pwncat.commands.get_module_choices(command)
+
+    Yields a list of module choices to be used with command argument choices to select a valid module for the current target. For example you could use Parameter(Complete.CHOICES, choices=get_module_choices)
+
+pwncat.commands.resolve_blocks(source: str)
+
+    This is a dumb lexer that turns strings of text with code blocks (squigly braces) into a single long string separated by semicolons. All code blocks are converted to strings recursively with correct escaping levels. The resulting string can be sent to break_commands to iterate over the commands.
+

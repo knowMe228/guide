@@ -1,0 +1,230 @@
+Generic facts used for standard enumerations. Some fact types are used for multiple platforms, so they were separated out here. You should not generally need to use these types except as reference when interacting with data returned by an enumeration module.
+
+class pwncat.facts.ArchData(source, arch)
+
+    Bases: pwncat.db.Fact
+
+    Simply the architecture of the remote machine. This class wraps the architecture name in a nicely printable data class.
+
+    Parameters
+
+            source (str) – module which generated this fact
+
+            arch (str) – the name of the architecture
+
+    arch: str
+
+        The determined architecture.
+
+    title(session)
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+class pwncat.facts.DistroVersionData(source, name, ident, build_id, version)
+
+    Bases: pwncat.db.Fact
+
+    OS Distribution and version information
+
+    Parameters
+
+            source (str) – module which generated this fact
+
+            name (str) – the name of the target operating system
+
+            ident (str) – identifier for this specific distro
+
+            build_id (str) – the build identifier for this OS
+
+            version (str) – the version of the installed OS
+
+    title(session)
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+class pwncat.facts.EscalationReplace(source, source_uid, uid)
+
+    Bases: pwncat.db.Fact
+
+    Performs escalation and transforms the current session into the context of the specified user. This is a base class for escalations.
+
+    Parameters
+
+            source (str) – the name of the generating module
+
+            source_uid – the starting uid needed to use this escalation
+
+            uid – the target uid for this escalation
+
+    escalate(session: pwncat.manager.Session) → Callable[[pwncat.manager.Session], None]
+
+        Execute the escalation optionally returning a new session
+
+        Parameters
+
+            session (pwncat.manager.Session) – the session on which to operate
+        Returns
+
+            Callable - A lambda taking the session and exiting the new shell
+
+class pwncat.facts.EscalationSpawn(source, source_uid, uid)
+
+    Bases: pwncat.db.Fact
+
+    Performs escalation and spawns a new session in the context of the specified user. The execute method will return the new session. This is a base class for escalations.
+
+    Parameters
+
+            source (str) – the name of the generating module
+
+            source_uid – the starting uid needed to use this escalation
+
+            uid – the target uid for this escalation
+
+    execute(session: pwncat.manager.Session) → pwncat.manager.Session
+
+        Spawn a new session under the context of a new user
+
+        Parameters
+
+            session (pwncat.manager.Session) – the session on which to operate
+        Returns
+
+            pwncat.manager.Session - a newly established session as the specified user
+
+class pwncat.facts.Group(source: str, name: str, gid, members)
+
+    Bases: pwncat.db.Fact
+
+    Basic representation of a user group on the target system. Individual platform enumeration modules may subclass this to implement other user properties as needed for their platform.
+
+    Parameters
+
+            source (str) – module which generated this fact
+
+            name (str) – the name of the group
+
+            id (Union[int, str]) – the unique group identifier
+
+            members (List[Union[int,str]]) – a list of unique UIDs who are members of this group
+
+    title(session: pwncat.manager.Session)
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+class pwncat.facts.HostnameData(source, hostname)
+
+    Bases: pwncat.db.Fact
+
+    The hostname of this target as retrieved from the target itself. This is not guaranteed to be resolvable, and is simply the name which the target uses for itself (e.g. from the hostname command).
+
+    Parameters
+
+            source (str) – module which generated this fact
+
+            hostname (str) – the hostname of the target
+
+    hostname: str
+
+        The determined architecture.
+
+    title(session)
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+class pwncat.facts.PotentialPassword(source, password, filepath, lineno, uid)
+
+    Bases: pwncat.db.Fact
+
+    A password possible extracted from a remote file filepath and lineno may be None signifying this password did not come from a file directly.
+
+    Parameters
+
+            source (str) – module which generated this fact
+
+            password (str) – the suspected password
+
+            filepath (str) – the file where we found the password
+
+            lineno (int) – the line number where the password was found
+
+            uid (Union[int, str]) – the user ID for which this password is suspected
+
+    title(session)
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+class pwncat.facts.PrivateKey(source, path, uid, content, encrypted, authorized: bool = True)
+
+    Bases: pwncat.facts.implant.Implant
+
+    A private key found on the remote file system or known to be applicable to this system in some way. This fact can also act as an implant. By default, removing the implant will only remove the implant types from the fact. It is assumed that the key was enumerated and not installed. If connection or escalation fails, the authorized property is set to False and the implant types are automatically removed.
+
+    Parameters
+
+            source (str) – module which generated this fact
+
+            path (str) – path to the private key on the target
+
+            uid (Union[int, str]) – the user for which the key was found
+
+            content (str) – content of the private key
+
+            encrypted (bool) – whether the key is encrypted
+
+            authorized (bool) – whether this key is authorized for the user
+
+    content: str
+
+        The actual content of the private key
+
+    description(session) → str
+
+        Returns a long-form description. If not defined, the result is assumed to not be a long-form result.
+
+    encrypted: bool
+
+        Is this private key encrypted?
+
+    escalate(session: pwncat.manager.Session)
+
+        Escalate to the owner of this private key with a local ssh call
+
+    path: str
+
+        The path to the private key on the remote host
+
+    remove(session: pwncat.manager.Session)
+
+        Remove the implant types from this private key
+
+    title(session: pwncat.manager.Session)
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+    trigger(manager: pwncat.manager.Manager, target: pwncat.target.Target)
+
+        Connect remotely to this target with the specified user and key
+
+    uid: int
+
+        The uid we believe the private key belongs to
+
+class pwncat.facts.User(source: str, name, uid, password: Optional[str] = None, hash: Optional[str] = None)
+
+    Bases: pwncat.db.Fact
+
+    Basic representation of a user on the target system. Individual platform enumeration modules may subclass this to implement other user properties as needed for their platform.
+
+    Parameters
+
+            source (str) – module which generated this fact
+
+            name (str) – name of the user
+
+            uid (Union[int, str]) – unique identifier for this user
+
+            password (Optional[str]) – the password if known
+
+            hash (Optional[str]) – the password hash if known
+

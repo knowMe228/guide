@@ -1,0 +1,197 @@
+Classes implementing specific abilities. Abilities provide access to specific actions as a different user. They are used when escalating privileges. Basic ability types are defined such as file read, file write and shell execution. This module also defines classes and methods which make building abilities from GTFOBins methods simpler, since they are used in multiple places within pwncat.
+
+class pwncat.facts.ability.ExecuteAbility(source: str, source_uid: Optional[Union[int, str]], uid: Union[int, str])
+
+    Bases: pwncat.db.Fact
+
+    Represents the ability to execute a shell as a different user.
+
+    Parameters
+
+            source (str) – generating module name
+
+            source_uid (Optional[Union[int, str]]) – the starting UID or None if it doesn’t matter
+
+            uid (Union[int, str]) – the target UID
+
+    shell(session: pwncat.manager.Session) → Callable[[pwncat.manager.Session], None]
+
+        Replace the current shell with a new shell as the identified user
+
+        Parameters
+
+            session (pwncat.manager.Session) – the session to operate on
+        Returns
+
+            Callable - A lambda taking the session and exiting the new shell
+
+class pwncat.facts.ability.FileReadAbility(source: str, source_uid: Optional[Union[int, str]], uid: Union[int, str])
+
+    Bases: pwncat.db.Fact
+
+    Represents the ability to read a file as a different user
+
+    Parameters
+
+            source (str) – generating module name
+
+            source_uid (Optional[Union[int, str]]) – the starting UID or None if it doesn’t matter
+
+            uid (Union[int, str]) – the target UID
+
+    open(session, path: str, mode: str = 'r', buffering: int = - 1, encoding: str = 'utf-8', errors: Optional[str] = None, newline: Optional[str] = None) → IO
+
+        Open a file for reading. This method mimics the builtin open function, and returns a file-like object for reading as the target user.
+
+class pwncat.facts.ability.FileWriteAbility(source: str, source_uid: Optional[Union[int, str]], uid: Union[int, str])
+
+    Bases: pwncat.db.Fact
+
+    Represents the ability to write a file as a different user
+
+    Parameters
+
+            source (str) – generating module name
+
+            source_uid (Optional[Union[int, str]]) – the starting UID or None if it doesn’t matter
+
+            uid (Union[int, str]) – the target UID
+
+    open(session, path: str, mode: str = 'r', buffering: int = - 1, encoding: str = 'utf-8', errors: Optional[str] = None, newline: Optional[str] = None) → IO
+
+        Open a file for writing. This method mimics the builtin open function and returns a file-like object for writing as the target user.
+
+class pwncat.facts.ability.GTFOExecute(source: str, source_uid: Optional[Union[int, str]], uid: Union[int, str], method: pwncat.gtfobins.MethodWrapper, **kwargs)
+
+    Bases: pwncat.facts.ability.ExecuteAbility
+
+    Execute a remote binary with a given GTFObins capability
+
+    Parameters
+
+            source (str) – generating module name
+
+            source_uid (Optional[Union[int, str]]) – the starting UID or None if it doesn’t matter
+
+            uid (Union[int, str]) – the target UID
+
+            method (pwncat.gtfobins.MethodWrapper) – the gtfobins method to utilize
+
+            **kwargs – keyword arguments passed to the method builder
+
+    Popen(session, *args, **kwargs)
+
+        Emulate the platform.Popen method for execution as another user
+
+    run(session, *args, **kwargs)
+
+        Emulate the platform.run method for execution as another user
+
+    send_command(session, command: Optional[bytes] = None)
+
+        Send the command to the target for this GTFObins
+
+    shell(session)
+
+        Replace the running shell with a shell as another user
+
+    title(session)
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+class pwncat.facts.ability.GTFOFileRead(source: str, source_uid: Optional[Union[int, str]], uid: Union[int, str], method: pwncat.gtfobins.MethodWrapper, **kwargs)
+
+    Bases: pwncat.facts.ability.FileReadAbility
+
+    Utilize a GTFO Method Wrapper to implement the FileReadAbility.
+
+    Parameters
+
+            source (str) – generating module name
+
+            source_uid (Optional[Union[int, str]]) – the starting UID or None if it doesn’t matter
+
+            uid (Union[int, str]) – the target UID
+
+            method (pwncat.gtfobins.MethodWrapper) – the gtfobins method to utilize
+
+            **kwargs – keyword arguments passed to the method builder
+
+    open(session, path: str, mode: str = 'r', buffering: int = - 1, encoding: str = 'utf-8', errors: Optional[str] = None, newline: Optional[str] = None)
+
+        Read the file data using a GTFObins reader
+
+    title(session)
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+class pwncat.facts.ability.GTFOFileWrite(source: str, source_uid: Optional[Union[int, str]], uid: Union[int, str], method: pwncat.gtfobins.MethodWrapper, **kwargs)
+
+    Bases: pwncat.facts.ability.FileWriteAbility
+
+    Utilize a GTFO Method Wrapper to implement the FileWriteAbility
+
+    Parameters
+
+            source (str) – generating module name
+
+            source_uid (Optional[Union[int, str]]) – the starting UID or None if it doesn’t matter
+
+            uid (Union[int, str]) – the target UID
+
+            method (pwncat.gtfobins.MethodWrapper) – the gtfobins method to utilize
+
+            **kwargs – keyword arguments passed to the method builder
+
+    open(session, path: str, mode: str = 'w', buffering: int = - 1, encoding: str = 'utf-8', errors: Optional[str] = None, newline: Optional[str] = None)
+
+        Read the file data using a GTFObins reader
+
+    title(session)
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+class pwncat.facts.ability.SpawnAbility(source: str, source_uid: Optional[Union[int, str]], uid: Union[int, str])
+
+    Bases: pwncat.db.Fact
+
+    Represents the ability to spawn a non-interactive process as another user.
+
+    Parameters
+
+            source (str) – generating module name
+
+            source_uid (Optional[Union[int, str]]) – the starting UID or None if it doesn’t matter
+
+            uid (Union[int, str]) – the target UID
+
+    execute(session: pwncat.manager.Session, command: str)
+
+        Utilize this ability to execute a command as a different user
+
+        Parameters
+
+                session (pwncat.manager.Session) – the session on which to operate
+
+                command (str) – a command to execute
+
+pwncat.facts.ability.build_gtfo_ability(source: str, uid: Union[int, str], method: pwncat.gtfobins.MethodWrapper, source_uid: Optional[Union[int, str]] = None, **kwargs) → Union[pwncat.facts.ability.GTFOFileRead, pwncat.facts.ability.GTFOFileWrite, pwncat.facts.ability.GTFOExecute]
+
+    Build a escalation ability from a GTFOBins method. This will return one of of the GTFO ability classes based on the capabilities exposed by the given GTFOBins method.
+
+    Parameters
+
+            source (str) – the generating module
+
+            uid (Union[int, str]) – the user ID of the target user
+
+            method (pwncat.gtfobins.MethodWrapper) – the GTFObins method to use
+
+            source_uid (Optional[Union[int, str]]) – the user ID of the required starting user (or None if it does not matter)
+
+            **kwargs – keyword arguments passed to the GTFOBins method builder
+
+    Return type
+
+        Union[GTFOFileRead, GTFOFileWrite, GTFOExecute]
+

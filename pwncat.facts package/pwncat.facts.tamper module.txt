@@ -1,0 +1,126 @@
+Tampers are modifications which we knowingly made to the target host. pwncat tracks tampers wherever it can in order to warn the user that modifications have been made, and in some cases provide the ability to revert those modifications. This is not foolproof, but provides some ability to track your changes when on target.
+
+class pwncat.facts.tamper.CreatedDirectory(source: str, uid: Union[int, str], path: str, timestamp: Optional[datetime.datetime] = None)
+
+    Bases: pwncat.facts.tamper.Tamper
+
+    Tracks a new directory created on the target. The entire directory will be deleted upon revert.
+
+    Parameters
+
+            source (str) – generating module or routine
+
+            uid (Union[int, str]) – UID needed to revert
+
+            path (str) – path to replaced file
+
+            timestamp (Optional[datetime.datetime]) – the datetime that this change occurred
+
+    revert(session: pwncat.manager.Session)
+
+        Attempt to revert the tamper through the given session.
+
+        Parameters
+
+            session (pwncat.manager.Session) – the session on which to operate
+
+    property revertable
+
+        Test if this tamper is currently revertable
+
+    title(session: pwncat.manager.Session)
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+class pwncat.facts.tamper.CreatedFile(source: str, uid: Union[int, str], path: str, timestamp: Optional[datetime.datetime] = None)
+
+    Bases: pwncat.facts.tamper.Tamper
+
+    Tracks a new file created on the target. This is normally revertable as we just need to delete the file.
+
+    Parameters
+
+            source (str) – generating module or routine
+
+            uid (Union[int, str]) – UID needed to revert
+
+            path (str) – path to replaced file
+
+            timestamp (Optional[datetime.datetime]) – the datetime that this change occurred
+
+    revert(session: pwncat.manager.Session)
+
+        Attempt to revert the tamper through the given session.
+
+        Parameters
+
+            session (pwncat.manager.Session) – the session on which to operate
+
+    property revertable
+
+        Test if this tamper is currently revertable
+
+    title(session: pwncat.manager.Session)
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+class pwncat.facts.tamper.ReplacedFile(source: str, uid: Union[int, str], path: str, data: Optional[Union[str, bytes]], timestamp: Optional[datetime.datetime] = None)
+
+    Bases: pwncat.facts.tamper.Tamper
+
+    Represents a file that was replaced on the remote host. This is a revertable tamper as long as the data was stored prior to replacement.
+
+    Parameters
+
+            source (str) – generating module or routine
+
+            uid (Union[int, str]) – UID needed to revert
+
+            path (str) – path to replaced file
+
+            data (Optional[Union[str, bytes]]) – the original data in the file
+
+            timestamp (Optional[datetime.datetime]) – the datetime that this change occurred
+
+    revert(session: pwncat.manager.Session)
+
+        Attempt to revert the tamper through the given session.
+
+        Parameters
+
+            session (pwncat.manager.Session) – the session on which to operate
+
+    property revertable
+
+        Test if this tamper is currently revertable
+
+    title(session: pwncat.manager.Session)
+
+        Return a short-form description/title of the object. If not defined, this defaults to the object converted to a string.
+
+class pwncat.facts.tamper.Tamper(source: str, uid: Union[int, str], timestamp: Optional[datetime.datetime] = None)
+
+    Bases: pwncat.db.Fact
+
+    A generic “tamper” or modification to the remote target. Tampers can sometimes be reverted automatically, but at worst are tracked through the enumeration system.
+
+    Parameters
+
+            source (str) – a string describing the module or routine that generated the tamper
+
+            uid (Union[int, str]) – the user ID needed to revert the tamper
+
+            timestamp (Optional[datetime.datetime]) – the datetime that this change occurred
+
+    revert(session: pwncat.manager.Session)
+
+        Attempt to revert the tamper through the given session.
+
+        Parameters
+
+            session (pwncat.manager.Session) – the session on which to operate
+
+    property revertable
+
+        Test if this tamper is currently revertable
+
